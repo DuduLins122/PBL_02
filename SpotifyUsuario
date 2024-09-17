@@ -1,0 +1,100 @@
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Scanner;
+
+public class SpotifyUsuario {
+    private static List<Musica> bibliotecaMusicas = new ArrayList<>();
+    private static Playlist minhaPlaylist = new Playlist("Minha Playlist", "", 0);
+
+    public static void main(String[] args) {
+        inicializarMusicas();
+        Scanner scanner = new Scanner(System.in);
+        int opcao;
+
+        do {
+            System.out.println("\nMenu de Opções:");
+            System.out.println("1. Listar todas as músicas");
+            System.out.println("2. Adicionar música à playlist");
+            System.out.println("3. Remover música da playlist");
+            System.out.println("4. Tocar playlist");
+            System.out.println("5. Listar músicas da playlist");
+            System.out.println("0. Sair");
+            System.out.print("Escolha uma opção: ");
+            opcao = scanner.nextInt();
+            scanner.nextLine();
+
+            switch (opcao) {
+                case 1:
+                    listarTodasMusicas();
+                    break;
+                case 2:
+                    adicionarMusicaPlaylist(scanner);
+                    break;
+                case 3:
+                    removerMusicaPlaylist(scanner);
+                    break;
+                case 4:
+                    minhaPlaylist.tocarPlaylist();
+                    break;
+                case 5:
+                    minhaPlaylist.listarMusicas();
+                    break;
+                case 0:
+                    System.out.println("Saindo...");
+                    break;
+                default:
+                    System.out.println("Opção inválida. Tente novamente.");
+            }
+        } while (opcao != 0);
+
+        scanner.close();
+    }
+
+    private static void inicializarMusicas() {
+        bibliotecaMusicas.add(new Musica("Sicko Mode", "Travis Scott", 312));
+        bibliotecaMusicas.add(new Musica("Goosebumps", "Travis Scott", 240));
+        bibliotecaMusicas.add(new Musica("Highest in the Room", "Travis Scott", 244));
+        bibliotecaMusicas.add(new Musica("CAN'T SAY", "Travis Scott", 235));
+        bibliotecaMusicas.add(new Musica("After Party", "Don Toliver", 201));
+        bibliotecaMusicas.add(new Musica("No Idea", "Don Toliver", 195));
+        bibliotecaMusicas.add(new Musica("Euphoria", "Don Toliver", 222));
+        bibliotecaMusicas.add(new Musica("Cardigan", "Don Toliver", 208));
+        bibliotecaMusicas.add(new Musica("OUT WEST", "Travis Scott & Young Thug", 218));
+        bibliotecaMusicas.add(new Musica("Lemonade", "Internet Money ft. Don Toliver", 178));
+    }
+
+    private static void listarTodasMusicas() {
+        System.out.println("Músicas disponíveis:");
+        for (Musica musica : bibliotecaMusicas) {
+            System.out.println(musica.getTitulo() + " - " + musica.getArtista());
+        }
+    }
+
+    private static void adicionarMusicaPlaylist(Scanner scanner) {
+        listarTodasMusicas();
+        System.out.print("Digite o título da música que deseja adicionar: ");
+        String titulo = scanner.nextLine();
+        for (Musica musica : bibliotecaMusicas) {
+            if (musica.getTitulo().equalsIgnoreCase(titulo)) {
+                minhaPlaylist.adicionarMusica(musica);
+                System.out.println("Música adicionada à playlist!");
+                return;
+            }
+        }
+        System.out.println("Música não encontrada.");
+    }
+
+    private static void removerMusicaPlaylist(Scanner scanner) {
+        minhaPlaylist.listarMusicas();
+        System.out.print("Digite o título da música que deseja remover: ");
+        String titulo = scanner.nextLine();
+        for (Musica musica : minhaPlaylist.musicas) {
+            if (musica.getTitulo().equalsIgnoreCase(titulo)) {
+                minhaPlaylist.removerMusica(musica);
+                System.out.println("Música removida da playlist!");
+                return;
+            }
+        }
+        System.out.println("Música não encontrada na playlist.");
+    }
+}
