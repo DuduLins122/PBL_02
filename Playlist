@@ -1,0 +1,33 @@
+import java.util.ArrayList;
+import java.util.List;
+
+public class Playlist extends Musica {
+    private List<Musica> musicas;
+
+    public Playlist(String titulo, String artista, int duracao) {
+        super(titulo, artista, duracao);
+        this.musicas = new ArrayList<>();
+    }
+
+    public void adicionarMusica(Musica musica) {
+        musicas.add(musica);
+    }
+
+    public void removerMusica(Musica musica) {
+        musicas.remove(musica);
+    }
+
+    public void tocarPlaylist() {
+        System.out.println("Tocando playlist...");
+        for (Musica musica : musicas) {
+            musica.tocar();
+        }
+    }
+
+    public void listarMusicas() {
+        System.out.println("Músicas na playlist:");
+        for (Musica musica : musicas) {
+            System.out.println(musica.getTitulo() + " - " + musica.getArtista());
+        }
+    }
+}
