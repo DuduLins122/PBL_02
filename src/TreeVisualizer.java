@@ -1,77 +1,130 @@
-/*
- * Componente JavaFX para desenhar a ABB do Morse.
- * Usa um Canvas e recursão; não utiliza coleções.
- */
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.layout.Pane;
+import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
+import javafx.scene.text.Text;
 
-public class TreeVisualizer extends Pane {
-    private final Canvas canvas = new Canvas(900, 520);
-    private Node root;
+/**
+ * Navega pela árvore usando somente a API pública exposta em MorseBST.
+ */
+public class TreeVisualizer extends StackPane {
+
+    private final Canvas canvas = new Canvas(800, 500);
+
+    // Referência à árvore e handle da raiz
+    private MorseBST tree;
+    private Object rootHandle;
 
     public TreeVisualizer() {
         getChildren().add(canvas);
-        setPrefSize(canvas.getWidth(), canvas.getHeight());
+
+        // Redesenha ao redimensionar
+        widthProperty().addListener((o, a, b) -> {
+            canvas.setWidth(b.doubleValue());
+            redraw();
+        });
+        heightProperty().addListener((o, a, b) -> {
+            canvas.setHeight(b.doubleValue());
+            redraw();
+        });
     }
 
-    public void setRoot(Node r) {
-        this.root = r;
-        draw();
-    }
-
-    private double treeHeight(Node n) {
-        if (n == null) return 0;
-        double lh = treeHeight(n.left);
-        double rh = treeHeight(n.right);
-        return 1 + (lh > rh ? lh : rh);
-    }
-
-    private void drawEdge(GraphicsContext g, double x1, double y1, double x2, double y2) {
-        g.strokeLine(x1, y1, x2, y2);
-    }
-
-    private void drawNode(GraphicsContext g, double x, double y, String text) {
-        double r = 16;
-        g.setFill(Color.LIGHTGRAY);
-        g.fillOval(x - r, y - r, 2*r, 2*r);
-        g.setStroke(Color.BLACK);
-        g.strokeOval(x - r, y - r, 2*r, 2*r);
-        g.setFill(Color.BLACK);
-        g.setFont(Font.font(14));
-        g.fillText(text, x - 5, y + 5);
-    }
-
-    private void drawRecursive(GraphicsContext g, Node n, double x, double y, double dx, double dy) {
-        if (n == null) return;
-        String label = n.hasValue ? String.valueOf(n.value) : "·";
-        drawNode(g, x, y, label);
-
-        if (n.left != null) {
-            double nx = x - dx, ny = y + dy;
-            drawEdge(g, x, y, nx, ny);
-            drawRecursive(g, n.left, nx, ny, dx/1.6, dy);
+    /** Associa o visualizador a uma instância de MorseBST. */
+    public void bind(MorseBST tree) {
+        this.tree = tree;
+        if (tree != null) {
+            this.rootHandle = tree.getRootHandle();
         }
-        if (n.right != null) {
-            double nx = x + dx, ny = y + dy;
-            drawEdge(g, x, y, nx, ny);
-            drawRecursive(g, n.right, nx, ny, dx/1.6, dy);
-        }
+        redraw();
     }
 
-    private void draw() {
+    /** Atualiza a raiz (handle retornado por MorseBST.getRootHandle()). */
+    public void setRootHandle(Object rootHandle) {
+        this.rootHandle = rootHandle;
+        redraw();
+    }
+
+    private void redraw() {
         GraphicsContext g = canvas.getGraphicsContext2D();
+        double w = canvas.getWidth();
+        double h = canvas.getHeight();
+
+        // fundo
         g.setFill(Color.WHITE);
-        g.fillRect(0, 0, canvas.getWidth(), canvas.getHeight());
+        g.fillRect(0, 0, w, h);
 
-        if (root == null) return;
+        if (tree == null || rootHandle == null) {
+            g.setFill(Color.GRAY);
+            g.setFont(Font.font(16));
+            g.fillText("Árvore vazia. Insira elementos para visualizar.", 20, 40);
+            return;
+        }
 
-        double h = treeHeight(root);
-        double dy = 70;
-        double dx = Math.pow(2, h) * 5; // espaçamento horizontal aproximado
+        int height = heightOf(rootHandle);
+        height = Math.max(height, 1);
 
-        drawRecursive(g, root, canvas.getWidth()/2, 40, dx, dy);
+        double topMargin = 40;
+        double levelGap = Math.max(70, (h - topMargin - 40) / Math.max(1, height));
+        double initialX = w / 2.0;
+        double initialY = topMargin;
+        double initialOffset = Math.max(40, w / 4.0);
+
+        g.setStroke(Color.BLACK);
+        g.setLineWidth(1.5);
+        g.setFont(Font.font(14));
+
+        drawNode(g, rootHandle, initialX, initialY, initialOffset, levelGap);
+    }
+
+    private void drawNode(GraphicsContext g, Object handle, double x, double y,
+                          double xOffset, double levelGap) {
+        if (handle == null) return;
+
+        Object left = tree.leftOf(handle);
+        Object right = tree.rightOf(handle);
+
+        // arestas primeiro
+        if (left != null) {
+            double nx = x - xOffset;
+            double ny = y + levelGap;
+            g.strokeLine(x, y + 15, nx, ny - 15);
+            drawNode(g, left, nx, ny, Math.max(18, xOffset / 2.0), levelGap);
+        }
+        if (right != null) {
+            double nx = x + xOffset;
+            double ny = y + levelGap;
+            g.strokeLine(x, y + 15, nx, ny - 15);
+            drawNode(g, right, nx, ny, Math.max(18, xOffset / 2.0), levelGap);
+        }
+
+        // nó
+        double r = 18;
+        g.setFill(Color.WHITE);
+        g.fillOval(x - r, y - r, 2 * r, 2 * r);
+        g.strokeOval(x - r, y - r, 2 * r, 2 * r);
+
+        // valor (se tiver)
+        if (tree.hasValue(handle)) {
+            char ch = tree.valueOf(handle);
+            if (ch != '\0' && ch != ' ') {
+                String s = String.valueOf(ch);
+                // medir com Text (sem com.sun.*)
+                Text t = new Text(s);
+                t.setFont(g.getFont());
+                double tw = t.getLayoutBounds().getWidth();
+                double th = t.getLayoutBounds().getHeight();
+                g.setFill(Color.BLACK);
+                g.fillText(s, x - tw / 2.0, y + th / 4.0);
+            }
+        }
+    }
+
+    // -------- utilitário de altura (navega via API pública do MorseBST) --------
+    private int heightOf(Object handle) {
+        if (handle == null) return 0;
+        Object l = tree.leftOf(handle);
+        Object r = tree.rightOf(handle);
+        return 1 + Math.max(heightOf(l), heightOf(r));
     }
 }
