@@ -3,8 +3,18 @@
  * Heurística: ponto vai para a esquerda (.) e traço vai para a direita (-).
  * Todas as operações (inserção, busca/encode, decode) são recursivas.
  * Não utiliza nenhuma estrutura pronta do Java (List, Map, etc.).
+ * Não usa StringBuilder.
  */
 public class MorseBST {
+
+    // ----- Nó interno da ABB -----
+    private static class Node {
+        Node left;
+        Node right;
+        char value;
+        boolean hasValue;
+    }
+
     private final Node root = new Node();
 
     public boolean isEmpty() {
@@ -31,7 +41,6 @@ public class MorseBST {
             if (node.right == null) node.right = new Node();
             insertRec(node.right, morse, idx + 1, c);
         } else {
-            // caractere inválido na descrição morse
             throw new IllegalArgumentException("Código morse inválido para inserção: '" + ch + "'");
         }
     }
@@ -96,10 +105,7 @@ public class MorseBST {
         return prefix + morse + encodeLineRec(text, idx + 1, false);
     }
 
-    // ---------- DECODE de linha inteira (recursivo) ----------
-    // Aceita '.', '-', espaço e '/'; separa palavras por '/'.
-    
-
+    // ---------- Validação de caracteres do DECODE ----------
     private void validateDecodeCharacters(String s, int idx) {
         if (idx >= s.length()) return;
         char ch = s.charAt(idx);
@@ -109,132 +115,64 @@ public class MorseBST {
         validateDecodeCharacters(s, idx + 1);
     }
 
-    private int skipSpaces(String s, int idx) {
-        if (idx >= s.length()) return idx;
-        if (s.charAt(idx) == ' ') return skipSpaces(s, idx + 1);
-        return idx;
+    // ---------- DECODE de linha inteira (recursivo) ----------
+    // Aceita '.', '-', espaço e '/'; separa palavras por '/'.
+    // Versão sem StringBuilder.
+    public String decodeLine(String line) {
+        if (line == null) return "";
+        validateDecodeCharacters(line, 0);
+        return decodeLineRecNoSB(line);
     }
 
-    // devolve próximo índice após consumir um token (até espaço ou '/')
-    private int tokenEnd(String s, int idx) {
-        if (idx >= s.length()) return idx;
-        char ch = s.charAt(idx);
-        if (ch == ' ' || ch == '/') return idx;
-        return tokenEnd(s, idx + 1);
-    }
+    private String decodeLineRecNoSB(String s) {
+        if (s == null || s.isEmpty()) return "";
 
-    private void decodeLineRec(String s, int idx, StringBuilder out) {
-        if (idx >= s.length()) return;
+        // pular espaços no começo
+        int i = 0;
+        while (i < s.length() && s.charAt(i) == ' ') i++;
+        if (i >= s.length()) return "";
 
-        // pular espaços
-        int i = skipSpaces(s, idx);
-        if (i >= s.length()) return;
+        char ch = s.charAt(i);
 
-        // separador de palavras
-        if (s.charAt(i) == '/') {
-            out = out + (' ');
-            decodeLineRec(s, i + 1, out);
-            return;
+        // separador de palavra
+        if (ch == '/') {
+            int j = i + 1;
+            while (j < s.length() && s.charAt(j) == ' ') j++;
+            return " " + decodeLineRecNoSB(s.substring(j));
         }
 
-        // ler token morse até espaço ou '/'
-        int j = tokenEnd(s, i);
+        // ler token morse [.,-] até espaço ou '/'
+        int j = i;
+        while (j < s.length()) {
+            char c = s.charAt(j);
+            if (c == ' ' || c == '/') break;
+            j++;
+        }
         String token = s.substring(i, j);
         char decoded = decodeChar(token);
         if (decoded == 0) {
             throw new IllegalArgumentException("Token morse inválido para DECODE: \"" + token + "\"");
         }
-        out = out + (decoded);
 
-        decodeLineRec(s, j, out);
+        int k = j;
+        while (k < s.length() && s.charAt(k) == ' ') k++;
+        return decoded + decodeLineRecNoSB(s.substring(k));
     }
 
     // ---------- CARGA PADRÃO (A-Z e 0-9) ----------
     public void loadDefault() {
         // Letras
-        insert(".-",   'A');
-        insert("-...", 'B');
-        insert("-.-.", 'C');
-        insert("-..",  'D');
-        insert(".",    'E');
-        insert("..-.", 'F');
-        insert("--.",  'G');
-        insert("....", 'H');
-        insert("..",   'I');
-        insert(".---", 'J');
-        insert("-.-",  'K');
-        insert(".-..", 'L');
-        insert("--",   'M');
-        insert("-.",   'N');
-        insert("---",  'O');
-        insert(".--.", 'P');
-        insert("--.-", 'Q');
-        insert(".-.",  'R');
-        insert("...",  'S');
-        insert("-",    'T');
-        insert("..-",  'U');
-        insert("...-", 'V');
-        insert(".--",  'W');
-        insert("-..-", 'X');
-        insert("-.--", 'Y');
+        insert(".-",   'A');  insert("-...", 'B'); insert("-.-.", 'C'); insert("-..",  'D'); insert(".",    'E');
+        insert("..-.", 'F');  insert("--.",  'G'); insert("....", 'H'); insert("..",   'I'); insert(".---", 'J');
+        insert("-.-",  'K');  insert(".-..", 'L'); insert("--",   'M'); insert("-.",   'N'); insert("---",  'O');
+        insert(".--.", 'P');  insert("--.-", 'Q'); insert(".-.",  'R'); insert("...",  'S'); insert("-",    'T');
+        insert("..-",  'U');  insert("...-", 'V'); insert(".--",  'W'); insert("-..-", 'X'); insert("-.--", 'Y');
         insert("--..", 'Z');
 
         // Dígitos
-        insert("-----", '0');
-        insert(".----", '1');
-        insert("..---", '2');
-        insert("...--", '3');
-        insert("....-", '4');
-        insert(".....", '5');
-        insert("-....", '6');
-        insert("--...", '7');
-        insert("---..", '8');
-        insert("----.", '9');
+        insert("-----", '0'); insert(".----", '1'); insert("..---", '2'); insert("...--", '3'); insert("....-", '4');
+        insert(".....", '5'); insert("-....", '6'); insert("--...", '7'); insert("---..", '8'); insert("----.", '9');
     }
 
     public Node getRoot() { return root; }
-
-
-// ---------- DECODE de linha inteira (recursivo) ----------
-// Aceita '.', '-', espaço e '/'; separa palavras por '/'.
-// Versão sem StringBuilder.
-public String decodeLine(String line) {
-    if (line == null) return "";
-    validateDecodeCharacters(line, 0);
-    return decodeLineRecNoSB(line);
-}
-
-private String decodeLineRecNoSB(String s) {
-    if (s == null || s.isEmpty()) return "";
-    // pular espaços no começo
-    int i = 0;
-    while (i < s.length() && s.charAt(i) == ' ') i++;
-    if (i >= s.length()) return "";
-
-    char ch = s.charAt(i);
-
-    // separador de palavra
-    if (ch == '/') {
-        int j = i + 1;
-        while (j < s.length() && s.charAt(j) == ' ') j++;
-        return " " + decodeLineRecNoSB(s.substring(j));
-    }
-
-    // ler token morse [.,-] até espaço ou '/'
-    int j = i;
-    while (j < s.length()) {
-        char c = s.charAt(j);
-        if (c == ' ' || c == '/') break;
-        j++;
-    }
-    String token = s.substring(i, j);
-    char decoded = decodeChar(token);
-    if (decoded == 0) {
-        throw new IllegalArgumentException("Token morse inválido para DECODE: \"" + token + "\"");
-    }
-
-    int k = j;
-    while (k < s.length() && s.charAt(k) == ' ') k++;
-    return decoded + decodeLineRecNoSB(s.substring(k));
-}
 }
