@@ -17,11 +17,22 @@ public class MorseBST {
 
     private final Node root = new Node();
 
-    public boolean isEmpty() {
-        return !root.hasValue && root.left == null && root.right == null;
+    // ====== Construtor: popula a árvore Morse ======
+    public MorseBST() {
+        // Letras
+        insert(".-",   'A');  insert("-...", 'B'); insert("-.-.", 'C'); insert("-..",  'D'); insert(".",    'E');
+        insert("..-.", 'F');  insert("--.",  'G'); insert("....", 'H'); insert("..",   'I'); insert(".---", 'J');
+        insert("-.-",  'K');  insert(".-..", 'L'); insert("--",   'M'); insert("-.",   'N'); insert("---",  'O');
+        insert(".--.", 'P');  insert("--.-", 'Q'); insert(".-.",  'R'); insert("...",  'S'); insert("-",    'T');
+        insert("..-",  'U');  insert("...-", 'V'); insert(".--",  'W'); insert("-..-", 'X'); insert("-.--", 'Y');
+        insert("--..", 'Z');
+
+        // Dígitos
+        insert("-----", '0'); insert(".----", '1'); insert("..---", '2'); insert("...--", '3'); insert("....-", '4');
+        insert(".....", '5'); insert("-....", '6'); insert("--...", '7'); insert("---..", '8'); insert("----.", '9');
     }
 
-    // ---------- INSERÇÃO (recursiva) ----------
+    // ====== Inserção recursiva: morse '.' vai para left, '-' vai para right ======
     public void insert(String morse, char c) {
         if (morse == null) return;
         insertRec(root, morse, 0, Character.toUpperCase(c));
@@ -40,139 +51,118 @@ public class MorseBST {
         } else if (ch == '-') {
             if (node.right == null) node.right = new Node();
             insertRec(node.right, morse, idx + 1, c);
-        } else {
-            throw new IllegalArgumentException("Código morse inválido para inserção: '" + ch + "'");
-        }
+        } // caracteres inválidos são ignorados
     }
 
-    // ---------- DECODE de UM símbolo (recursivo) ----------
-    public char decodeChar(String morse) {
-        if (morse == null || morse.isEmpty()) return 0;
-        return decodeCharRec(root, morse, 0);
-    }
-
-    private char decodeCharRec(Node node, String morse, int idx) {
-        if (node == null) return 0;
-        if (idx == morse.length()) {
-            return node.hasValue ? node.value : 0;
-        }
-        char ch = morse.charAt(idx);
-        if (ch == '.') return decodeCharRec(node.left, morse, idx + 1);
-        if (ch == '-') return decodeCharRec(node.right, morse, idx + 1);
-        return 0;
-    }
-
-    // ---------- ENCODE de UM caractere (recursivo DFS) ----------
-    public String encodeChar(char c) {
-        c = Character.toUpperCase(c);
-        return encodeFindRec(root, c, "");
-    }
-
-    private String encodeFindRec(Node node, char target, String path) {
-        if (node == null) return null;
-        if (node.hasValue && node.value == target) return path;
-
-        String leftTry = encodeFindRec(node.left, target, path + ".");
-        if (leftTry != null) return leftTry;
-        return encodeFindRec(node.right, target, path + "-");
-    }
-
-    // ---------- ENCODE de linha inteira (recursivo) ----------
-    // Entre letras: espaço simples. Entre palavras: " / " (barra).
-    public String encodeLine(String text) {
+    // ====== Encode (texto -> morse) ======
+    public String encodeText(String text) {
         if (text == null) return "";
-        return encodeLineRec(text, 0, true);
-    }
-
-    private String encodeLineRec(String text, int idx, boolean first) {
-        if (idx >= text.length()) return "";
-        char ch = text.charAt(idx);
-
-        // espaço em branco serve como separador de palavras
-        if (Character.isWhitespace(ch)) {
-            // pula sequência de espaços
-            int j = idx + 1;
-            while (j < text.length() && Character.isWhitespace(text.charAt(j))) j++;
-            String sep = first ? "" : " / ";
-            return sep + encodeLineRec(text, j, false);
-        }
-
-        String morse = encodeChar(ch);
-        if (morse == null) {
-            throw new IllegalArgumentException("Caractere não suportado para ENCODE: '" + ch + "'");
-        }
-        String prefix = first ? "" : " ";
-        return prefix + morse + encodeLineRec(text, idx + 1, false);
-    }
-
-    // ---------- Validação de caracteres do DECODE ----------
-    private void validateDecodeCharacters(String s, int idx) {
-        if (idx >= s.length()) return;
-        char ch = s.charAt(idx);
-        if (ch != '.' && ch != '-' && ch != ' ' && ch != '/') {
-            throw new IllegalArgumentException("Entrada de DECODE inválida: contém '" + ch + "'");
-        }
-        validateDecodeCharacters(s, idx + 1);
-    }
-
-    // ---------- DECODE de linha inteira (recursivo) ----------
-    // Aceita '.', '-', espaço e '/'; separa palavras por '/'.
-    // Versão sem StringBuilder.
-    public String decodeLine(String line) {
-        if (line == null) return "";
-        validateDecodeCharacters(line, 0);
-        return decodeLineRecNoSB(line);
-    }
-
-    private String decodeLineRecNoSB(String s) {
-        if (s == null || s.isEmpty()) return "";
-
-        // pular espaços no começo
+        String out = "";
         int i = 0;
-        while (i < s.length() && s.charAt(i) == ' ') i++;
-        if (i >= s.length()) return "";
-
-        char ch = s.charAt(i);
-
-        // separador de palavra
-        if (ch == '/') {
-            int j = i + 1;
-            while (j < s.length() && s.charAt(j) == ' ') j++;
-            return " " + decodeLineRecNoSB(s.substring(j));
+        while (i < text.length()) {
+            char ch = Character.toUpperCase(text.charAt(i));
+            if (ch == ' ') {
+                // separador de palavras: usa " / "
+                out = out + "/ ";
+                i++;
+                continue;
+            }
+            String code = encodeChar(root, ch, "");
+            if (code.length() > 0) {
+                out = out + code + " ";
+            }
+            i++;
         }
-
-        // ler token morse [.,-] até espaço ou '/'
-        int j = i;
-        while (j < s.length()) {
-            char c = s.charAt(j);
-            if (c == ' ' || c == '/') break;
-            j++;
-        }
-        String token = s.substring(i, j);
-        char decoded = decodeChar(token);
-        if (decoded == 0) {
-            throw new IllegalArgumentException("Token morse inválido para DECODE: \"" + token + "\"");
-        }
-
-        int k = j;
-        while (k < s.length() && s.charAt(k) == ' ') k++;
-        return decoded + decodeLineRecNoSB(s.substring(k));
+        return out.trim();
     }
 
-    // ---------- CARGA PADRÃO (A-Z e 0-9) ----------
-    public void loadDefault() {
-        // Letras
-        insert(".-",   'A');  insert("-...", 'B'); insert("-.-.", 'C'); insert("-..",  'D'); insert(".",    'E');
-        insert("..-.", 'F');  insert("--.",  'G'); insert("....", 'H'); insert("..",   'I'); insert(".---", 'J');
-        insert("-.-",  'K');  insert(".-..", 'L'); insert("--",   'M'); insert("-.",   'N'); insert("---",  'O');
-        insert(".--.", 'P');  insert("--.-", 'Q'); insert(".-.",  'R'); insert("...",  'S'); insert("-",    'T');
-        insert("..-",  'U');  insert("...-", 'V'); insert(".--",  'W'); insert("-..-", 'X'); insert("-.--", 'Y');
-        insert("--..", 'Z');
-
-        // Dígitos
-        insert("-----", '0'); insert(".----", '1'); insert("..---", '2'); insert("...--", '3'); insert("....-", '4');
-        insert(".....", '5'); insert("-....", '6'); insert("--...", '7'); insert("---..", '8'); insert("----.", '9');
+    // Busca recursiva do código de um caractere
+    private String encodeChar(Node node, char target, String path) {
+        if (node == null) return "";
+        if (node.hasValue && node.value == target) return path;
+        String left = encodeChar(node.left, target, path + ".");
+        if (left.length() > 0) return left;
+        String right = encodeChar(node.right, target, path + "-");
+        if (right.length() > 0) return right;
+        return "";
     }
 
+    // ====== Decode (morse -> texto) ======
+    public String decodeText(String morseLine) {
+        if (morseLine == null) return "";
+        String out = "";
+        int i = 0;
+        while (i < morseLine.length()) {
+            // pula espaços extras
+            while (i < morseLine.length() && morseLine.charAt(i) == ' ') i++;
+            if (i >= morseLine.length()) break;
+
+            // separador de palavras "/"
+            if (morseLine.charAt(i) == '/') {
+                out = out + " ";
+                i++;
+                continue;
+            }
+
+            // lê um token até espaço ou '/'
+            String code = "";
+            while (i < morseLine.length()) {
+                char ch = morseLine.charAt(i);
+                if (ch == '.' || ch == '-') {
+                    code = code + ch;
+                    i++;
+                } else {
+                    break;
+                }
+            }
+
+            char decoded = decodeCode(root, code, 0);
+            if (decoded != '\0') {
+                out = out + decoded;
+            }
+
+            // consome espaços entre tokens
+            while (i < morseLine.length() && morseLine.charAt(i) == ' ') i++;
+        }
+        return out;
+    }
+
+    // desce recursivamente pelo código morse
+    private char decodeCode(Node node, String code, int idx) {
+        if (node == null) return '\0';
+        if (idx == code.length()) {
+            return node.hasValue ? node.value : '\0';
+        }
+        char ch = code.charAt(idx);
+        if (ch == '.') return decodeCode(node.left, code, idx + 1);
+        if (ch == '-') return decodeCode(node.right, code, idx + 1);
+        return '\0';
+    }
+
+    // ====== Suporte ao app/visualizador ======
+    /** Mantido por compatibilidade (já existia no seu arquivo). */
     public Node getRoot() { return root; }
+
+    /** API pública para o TreeVisualizer (sem reflexão): trabalha com "handles". */
+    public Object getRootHandle() { return root; }
+
+    public Object leftOf(Object handle) {
+        if (handle == null) return null;
+        return ((Node) handle).left;
+    }
+
+    public Object rightOf(Object handle) {
+        if (handle == null) return null;
+        return ((Node) handle).right;
+    }
+
+    public char valueOf(Object handle) {
+        if (handle == null) return '\0';
+        return ((Node) handle).value;
+    }
+
+    public boolean hasValue(Object handle) {
+        if (handle == null) return false;
+        return ((Node) handle).hasValue;
+    }
 }
